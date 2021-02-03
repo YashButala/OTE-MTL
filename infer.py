@@ -41,7 +41,7 @@ class Inferer:
 
 
 if __name__ == '__main__':
-    dataset = 'laptop14'
+    dataset = 'restall'
     # set your trained models here
     model_state_dict_paths = {
         'ote': 'state_dict/ote_'+dataset+'.pkl',
@@ -60,6 +60,7 @@ if __name__ == '__main__':
         'rest14': 'datasets/14rest',
         'rest15': 'datasets/15rest',
         'rest16': 'datasets/16rest',
+        'restall': 'datasets/restall'
     }
     class Option(object): pass
     opt = Option()
@@ -80,17 +81,59 @@ if __name__ == '__main__':
     inf = Inferer(opt)
 
     #rest
-    #text = 'Great food but the service was dreadful !'
+    text = 'Great food but the service was dreadful !'
     #text = 'the atmosphere is attractive , but a little uncomfortable .'
     #laptop
-    text = 'I am pleased with the fast log on , speedy WiFi connection and the long battery life ( > 6 hrs ) .'
-    triplets = inf.evaluate(text)[2][0]
-    words = text.split()
-    polarity_map = {0:'N', 1:'NEU', 2:'NEG', 3:'POS'}
-    for triplet in triplets:
-        ap_beg, ap_end, op_beg, op_end, p = triplet
-        ap = ' '.join(words[ap_beg:ap_end+1])
-        op = ' '.join(words[op_beg:op_end+1])
-        polarity = polarity_map[p]
-        print(f'{ap}, {op}, {polarity}')
+    #text = 'I am pleased with the fast log on , speedy WiFi connection and the long battery life ( > 6 hrs ) .'
+    tupsfile = open('train.tup', 'w')
+    sentfile = open('train.sent', 'w')
+    ptrfile = open('train.pointer', 'w')
+    infile = open('yelp.txt')
+    pm = 0
+    ps = 0
+    nm = 0
+    ns = 0
+    for text in infile:
+        triplets = inf.evaluate(text)[2][0]
+        words = text.split()
+        print(text)
+        polarity_map = {0:'N', 1:'NEU', 2:'NEG', 3:'POS'}
+        tup = ''
+        num = ''
+        f = 1
+        for triplet in triplets:
+            ap_beg, ap_end, op_beg, op_end, p = triplet
+            ap = ' '.join(words[ap_beg:ap_end+1])
+            op = ' '.join(words[op_beg:op_end+1])
+            polarity = polarity_map[p]
+            if p==0:
+                continue
+            if polarity=='NEG':
+                f = 0
+            tup += ap+' ; '+ op+' ; '+polarity+' | '
+            num += str(ap_beg)+' '+str(ap_end)+' '+str(op_beg)+' '+str(op_end)+' '+polarity+' | '
+        if tup=='':
+            continue
+        if len(triplets)>1 and f==1 and pm<3000:
+            pm += 1
+            tupsfile.write(tup[:-3]+'\n')
+            ptrfile.write(num[:-3]+'\n')
+            sentfile.write(text)
+        if len(triplets)>1 and f==0 and nm<3000:
+            nm += 1
+            tupsfile.write(tup[:-3]+'\n')
+            ptrfile.write(num[:-3]+'\n')
+            sentfile.write(text)
+        if len(triplets)==1 and f==1 and ps<3000:
+            ps += 1
+            tupsfile.write(tup[:-3]+'\n')
+            ptrfile.write(num[:-3]+'\n')
+            sentfile.write(text)
+        if len(triplets)==1 and f==0 and ns<3000:
+            ns += 1
+            tupsfile.write(tup[:-3]+'\n')
+            ptrfile.write(num[:-3]+'\n')
+            sentfile.write(text)
+        if pm>=3000 and nm>=3000 and ns>=3000 and ps>=3000:
+            break
 
